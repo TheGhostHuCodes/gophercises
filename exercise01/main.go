@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 )
 
 type problem struct {
@@ -45,6 +46,7 @@ func parseCsvLines(lines [][]string) []problem {
 
 func main() {
 	csvFilename := flag.String("csv", "problems.csv", "A CSV file in the format 'question,answer'.")
+	timeLimit := flag.Int("limit", 30, "A time limit for the quiz, in seconds.")
 	flag.Parse()
 
 	problems := parseCsvProblems(*csvFilename)
@@ -55,22 +57,36 @@ func main() {
 	var answered int
 	var correct int
 
-	sigs := make(chan os.Signal, 1)
+	fmt.Println("Press enter to start the quiz.")
+	_, _ = reader.ReadString('\n')
+
+	sigs := make(chan os.Signal)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	go func() {
-		<-sigs
-		fmt.Println("Ending early!")
-		fmt.Printf("%v correct out of %v total.\n", correct, answered)
-		os.Exit(0)
-	}()
+	timer := time.NewTimer(time.Duration(*timeLimit) * time.Second)
 
 	for i, problem := range problems {
-		answered++
 		fmt.Printf("Problem #%d: %s = ", i, problem.question)
-		guess, _ := reader.ReadString('\n')
-		if strings.TrimSpace(guess) == problem.answer {
-			correct++
+		answered++
+
+		answerCh := make(chan string)
+		go func() {
+			guess, _ := reader.ReadString('\n')
+			answerCh <- guess
+		}()
+
+		select {
+		case <-sigs:
+			fmt.Printf("\nExiting early.")
+			fmt.Printf("\n%v correct out of %v total.\n", correct, answered)
+		case <-timer.C:
+			fmt.Printf("\nOut of time.")
+			fmt.Printf("\n%v correct out of %v total.\n", correct, answered)
+			return
+		case guess := <-answerCh:
+			if strings.TrimSpace(guess) == problem.answer {
+				correct++
+			}
 		}
 	}
 
