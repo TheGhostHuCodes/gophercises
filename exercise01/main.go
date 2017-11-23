@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 )
 
 type problem struct {
@@ -52,6 +54,16 @@ func main() {
 
 	var answered int
 	var correct int
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		<-sigs
+		fmt.Println("Ending early!")
+		fmt.Printf("%v correct out of %v total.\n", correct, answered)
+		os.Exit(0)
+	}()
 
 	for i, problem := range problems {
 		answered++
