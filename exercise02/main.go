@@ -1,13 +1,19 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
 
 	"github.com/TheGhostHuCodes/gophercises/exercise02/urlshort"
 )
 
 func main() {
+	yamlFilename := flag.String("yaml", "", "A YAML file containing path to url mappings.")
+	flag.Parse()
 	mux := defaultMux()
 
 	// Build the MapHandler using the mux as the fallback
@@ -19,13 +25,25 @@ func main() {
 
 	// Build the YAMLHandler using the mapHandler as the
 	// fallback
-	yaml := `
+	var yaml []byte
+	if *yamlFilename != "" {
+		file, err := os.Open(*yamlFilename)
+		if err != nil {
+			log.Fatalf("Could not open YAML file: '%v'", err)
+		}
+		yaml, err = ioutil.ReadAll(file)
+		if err != nil {
+			log.Fatalf("Could not read YAML file: '%v'", err)
+		}
+	} else {
+		yaml = []byte(`
 - path: /urlshort
   url: https://github.com/gophercises/urlshort
 - path: /urlshort-final
   url: https://github.com/gophercises/urlshort/tree/solution
-`
-	yamlHandler, err := urlshort.YAMLHandler([]byte(yaml), mapHandler)
+`)
+	}
+	yamlHandler, err := urlshort.YAMLHandler(yaml, mapHandler)
 	if err != nil {
 		panic(err)
 	}

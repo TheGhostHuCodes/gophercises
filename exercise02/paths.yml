@@ -1,0 +1,4 @@
+- path: /hackernews
+  url: https://news.ycombinator.com/
+- path: /arstech
+  url: https://arstechnica.com/
