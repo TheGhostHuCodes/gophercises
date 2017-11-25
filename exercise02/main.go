@@ -7,8 +7,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/TheGhostHuCodes/gophercises/exercise02/urlshort"
+	bolt "github.com/coreos/bbolt"
 )
 
 func main() {
@@ -60,8 +62,47 @@ func main() {
 		panic(err)
 	}
 
+	db, err := bolt.Open("shortener.db", 0600, &bolt.Options{Timeout: 1 * time.Second})
+	defer db.Close()
+	if err != nil {
+		panic(fmt.Errorf("Error opening database: %s", err))
+	}
+
+	err = populateDb(db)
+	if err != nil {
+		panic(err)
+	}
+
+	boltHandler, err := urlshort.BoltHandler(db, jsonHandler)
+	if err != nil {
+		panic(err)
+	}
+
 	fmt.Println("Starting the server on :8080")
-	http.ListenAndServe(":8080", jsonHandler)
+	http.ListenAndServe(":8080", boltHandler)
+}
+
+func populateDb(db *bolt.DB) error {
+	// Create "paths" bucket.
+	db.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists([]byte(urlshort.BoltDBPathsBucketName))
+		if err != nil {
+			return fmt.Errorf("Error creating bucket : %s", err)
+		}
+		return nil
+	})
+
+	// Populate "paths" bucket.
+	err := db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(urlshort.BoltDBPathsBucketName))
+		err := b.Put([]byte("/boltdb"), []byte("https://github.com/coreos/bbolt"))
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("Error putting into bucket: %s", err)
+	}
+
+	return nil
 }
 
 func defaultMux() *http.ServeMux {

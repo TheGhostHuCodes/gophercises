@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	bolt "github.com/coreos/bbolt"
 	"gopkg.in/yaml.v2"
 )
 
@@ -89,4 +90,29 @@ func parseJSON(data []byte) ([]pathURL, error) {
 		return nil, err
 	}
 	return pathURLs, nil
+}
+
+// BoltDBPathsBucketName is the bucket name in our BoltDB instance that contains
+// mappings of paths to urls.
+const BoltDBPathsBucketName string = "paths"
+
+// BoltHandler returns an http.HandlerFunc (which also implements http.Handler)
+// that will attempt to map any paths to their corresponding URL by looking up
+// data paths in a BoltDB database. If the path is not provided in the BoltDB
+// database, then the fallback http.Handler will be called instead.
+func BoltHandler(db *bolt.DB, fallback http.Handler) (http.HandlerFunc, error) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte(BoltDBPathsBucketName))
+			if b == nil {
+				return nil
+			}
+			url := b.Get([]byte(r.URL.Path))
+			if url != nil {
+				http.Redirect(w, r, string(url), http.StatusFound)
+			}
+			return nil
+		})
+		fallback.ServeHTTP(w, r)
+	}, nil
 }
