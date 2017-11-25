@@ -1,6 +1,7 @@
 package urlshort
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"gopkg.in/yaml.v2"
@@ -47,8 +48,8 @@ func YAMLHandler(yamlBytes []byte, fallback http.Handler) (http.HandlerFunc, err
 }
 
 type pathURL struct {
-	Path string `yaml:"path"`
-	URL  string `yaml:"url"`
+	Path string `yaml:"path" json:"path"`
+	URL  string `yaml:"url" json:"url"`
 }
 
 func parseYaml(data []byte) ([]pathURL, error) {
@@ -66,4 +67,26 @@ func buildMap(pathURLs []pathURL) map[string]string {
 		pathsToUrls[path.Path] = path.URL
 	}
 	return pathsToUrls
+}
+
+// JSONHandler will parse the provided JSON and then return an http.HandlerFunc
+// (which also implements http.Handler) that will attempt to map any paths to
+// their corresponding URL. If the path is not provided in the JSON, then the
+// fallback http.Handler will be called instead.
+func JSONHandler(jsonBytes []byte, fallback http.Handler) (http.HandlerFunc, error) {
+	pathURLs, err := parseJSON(jsonBytes)
+	if err != nil {
+		return nil, err
+	}
+	pathsToURLs := buildMap(pathURLs)
+	return MapHandler(pathsToURLs, fallback), nil
+}
+
+func parseJSON(data []byte) ([]pathURL, error) {
+	var pathURLs []pathURL
+	err := json.Unmarshal(data, &pathURLs)
+	if err != nil {
+		return nil, err
+	}
+	return pathURLs, nil
 }
