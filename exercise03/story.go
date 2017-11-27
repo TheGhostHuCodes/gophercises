@@ -79,12 +79,16 @@ var defaultHandlerTemplate = `
 
 // NewHandler returns an instance of a handler struct that contains a Story for
 // the http.Handler to serve.
-func NewHandler(s Story) http.Handler {
-	return handler{s}
+func NewHandler(s Story, t *template.Template) http.Handler {
+	if t == nil {
+		t = tpl
+	}
+	return handler{s, t}
 }
 
 type handler struct {
 	s Story
+	t *template.Template
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
