@@ -77,13 +77,24 @@ var defaultHandlerTemplate = `
 		</body>
 	</html>`
 
+// HandlerOption is a type used to change different options within the handler.
+type HandlerOption func(h *handler)
+
+// WithTemplate sets the given template for use in the handler.
+func WithTemplate(t *template.Template) HandlerOption {
+	return func(h *handler) {
+		h.t = t
+	}
+}
+
 // NewHandler returns an instance of a handler struct that contains a Story for
 // the http.Handler to serve.
-func NewHandler(s Story, t *template.Template) http.Handler {
-	if t == nil {
-		t = tpl
+func NewHandler(s Story, opts ...HandlerOption) http.Handler {
+	h := handler{s, tpl}
+	for _, opt := range opts {
+		opt(&h)
 	}
-	return handler{s, t}
+	return h
 }
 
 type handler struct {
@@ -99,7 +110,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path = path[1:]
 
 	if chapter, ok := h.s[path]; ok {
-		err := tpl.Execute(w, chapter)
+		err := h.t.Execute(w, chapter)
 		if err != nil {
 			log.Printf("%v", err)
 			http.Error(w, "Something went wrong...", http.StatusInternalServerError)
