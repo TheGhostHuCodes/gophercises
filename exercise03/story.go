@@ -87,6 +87,13 @@ func WithTemplate(t *template.Template) HandlerOption {
 	}
 }
 
+// WithPathFunc sets the given path function for use in the handler.
+func WithPathFunc(fn func(r *http.Request) string) HandlerOption {
+	return func(h *handler) {
+		h.pathFn = fn
+	}
+}
+
 // NewHandler returns an instance of a handler struct that contains a Story for
 // the http.Handler to serve.
 func NewHandler(s Story, opts ...HandlerOption) http.Handler {
