@@ -44,7 +44,7 @@ func get(urlForMapping string) []string {
 	if err != nil {
 		panic(err)
 	}
-	return pages
+	return filter(pages, withPrefix(base))
 }
 
 func hrefs(html io.Reader, baseURL string) ([]string, error) {
@@ -62,4 +62,20 @@ func hrefs(html io.Reader, baseURL string) ([]string, error) {
 		}
 	}
 	return ret, nil
+}
+
+func filter(links []string, pred func(string) bool) []string {
+	var ret []string
+	for _, link := range links {
+		if pred(link) {
+			ret = append(ret, link)
+		}
+	}
+	return ret
+}
+
+func withPrefix(prefix string) func(string) bool {
+	return func(link string) bool {
+		return strings.HasPrefix(link, prefix)
+	}
 }
