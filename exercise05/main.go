@@ -3,7 +3,11 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
+	"strings"
+
+	"github.com/TheGhostHuCodes/gophercises/exercise04/link"
 )
 
 func main() {
@@ -20,4 +24,28 @@ func main() {
 		panic(err)
 	}
 	defer resp.Body.Close()
+
+	requestURL := resp.Request.URL
+	baseURL := &url.URL{
+		Scheme: requestURL.Scheme,
+		Host:   requestURL.Host,
+	}
+	base := baseURL.String()
+
+	links, err := link.Parse(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	var hrefs []string
+	for _, l := range links {
+		switch {
+		case strings.HasPrefix(l.Href, "/"):
+			hrefs = append(hrefs, base+l.Href)
+		case strings.HasPrefix(l.Href, "http"):
+			hrefs = append(hrefs, l.Href)
+		}
+	}
+	for _, href := range hrefs {
+		fmt.Println(href)
+	}
 }
