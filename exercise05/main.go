@@ -40,13 +40,17 @@ func get(urlForMapping string) []string {
 	}
 	base := baseURL.String()
 
-	return hrefs(resp.Body, base)
-}
-
-func hrefs(html io.Reader, baseURL string) []string {
-	links, err := link.Parse(html)
+	pages, err := hrefs(resp.Body, base)
 	if err != nil {
 		panic(err)
+	}
+	return pages
+}
+
+func hrefs(html io.Reader, baseURL string) ([]string, error) {
+	links, err := link.Parse(html)
+	if err != nil {
+		return nil, err
 	}
 	var ret []string
 	for _, l := range links {
@@ -57,5 +61,5 @@ func hrefs(html io.Reader, baseURL string) []string {
 			ret = append(ret, l.Href)
 		}
 	}
-	return ret
+	return ret, nil
 }
