@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -19,6 +20,13 @@ func main() {
 
 	urlForMapping := args[0]
 
+	pages := get(urlForMapping)
+	for _, page := range pages {
+		fmt.Println(page)
+	}
+}
+
+func get(urlForMapping string) []string {
 	resp, err := http.Get(urlForMapping)
 	if err != nil {
 		panic(err)
@@ -32,20 +40,22 @@ func main() {
 	}
 	base := baseURL.String()
 
-	links, err := link.Parse(resp.Body)
+	return hrefs(resp.Body, base)
+}
+
+func hrefs(html io.Reader, baseURL string) []string {
+	links, err := link.Parse(html)
 	if err != nil {
 		panic(err)
 	}
-	var hrefs []string
+	var ret []string
 	for _, l := range links {
 		switch {
 		case strings.HasPrefix(l.Href, "/"):
-			hrefs = append(hrefs, base+l.Href)
+			ret = append(ret, baseURL+l.Href)
 		case strings.HasPrefix(l.Href, "http"):
-			hrefs = append(hrefs, l.Href)
+			ret = append(ret, l.Href)
 		}
 	}
-	for _, href := range hrefs {
-		fmt.Println(href)
-	}
+	return ret
 }
