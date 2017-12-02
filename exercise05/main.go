@@ -41,6 +41,7 @@ func main() {
 
 func xmlSitemapWriter(w io.Writer, pages []string) error {
 	toXML := urlset{
+		Urls:  make([]loc, 0, len(pages)),
 		Xmlns: xmlns,
 	}
 	for _, page := range pages {
