@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,18 +13,43 @@ import (
 )
 
 func main() {
-	args := os.Args[1:]
-	if len(args) != 1 {
-		fmt.Printf("Recieved %d arguments (%v), expected 1 argument\n", len(args), args)
+	maxDepth := flag.Int("depth", 3, "The maximum depth of links to traverse.")
+	flag.Parse()
+	if flag.NArg() != 1 {
+		fmt.Printf("Recieved %d arguments (%v), expected 1 positional argument, with flags first.\n", flag.NArg(), flag.Args())
 		os.Exit(1)
 	}
+	urlForMapping := flag.Arg(0)
 
-	urlForMapping := args[0]
-
-	pages := get(urlForMapping)
+	pages := bfs(urlForMapping, *maxDepth)
 	for _, page := range pages {
 		fmt.Println(page)
 	}
+}
+
+func bfs(urlForMapping string, maxDepth int) []string {
+	seen := make(map[string]struct{})
+	var q map[string]struct{}
+	nq := map[string]struct{}{
+		urlForMapping: struct{}{},
+	}
+	for i := 0; i <= maxDepth; i++ {
+		q, nq = nq, make(map[string]struct{})
+		for url := range q {
+			if _, ok := seen[url]; ok {
+				continue
+			}
+			seen[url] = struct{}{}
+			for _, link := range get(url) {
+				nq[link] = struct{}{}
+			}
+		}
+	}
+	ret := make([]string, 0, len(seen))
+	for url := range seen {
+		ret = append(ret, url)
+	}
+	return ret
 }
 
 func get(urlForMapping string) []string {
