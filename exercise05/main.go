@@ -34,18 +34,22 @@ func main() {
 	urlForMapping := flag.Arg(0)
 
 	pages := bfs(urlForMapping, *maxDepth)
+	if err := xmlSitemapWriter(os.Stdout, pages); err != nil {
+		panic(err)
+	}
+}
+
+func xmlSitemapWriter(w io.Writer, pages []string) error {
 	toXML := urlset{
 		Xmlns: xmlns,
 	}
 	for _, page := range pages {
 		toXML.Urls = append(toXML.Urls, loc{page})
 	}
-	fmt.Print(xml.Header)
-	enc := xml.NewEncoder(os.Stdout)
+	fmt.Fprint(w, xml.Header)
+	enc := xml.NewEncoder(w)
 	enc.Indent("", "  ")
-	if err := enc.Encode(toXML); err != nil {
-		panic(err)
-	}
+	return enc.Encode(toXML)
 }
 
 func bfs(urlForMapping string, maxDepth int) []string {
