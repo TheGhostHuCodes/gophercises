@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/xml"
 	"flag"
 	"fmt"
 	"io"
@@ -12,6 +13,17 @@ import (
 	"github.com/TheGhostHuCodes/gophercises/exercise04/link"
 )
 
+const xmlns = "http://www.sitemaps.org/schemas/sitemap/0.9"
+
+type loc struct {
+	Value string `xml:"loc"`
+}
+
+type urlset struct {
+	Urls  []loc  `xml:"url"`
+	Xmlns string `xml:"xmlns,attr"`
+}
+
 func main() {
 	maxDepth := flag.Int("depth", 3, "The maximum depth of links to traverse.")
 	flag.Parse()
@@ -22,8 +34,17 @@ func main() {
 	urlForMapping := flag.Arg(0)
 
 	pages := bfs(urlForMapping, *maxDepth)
+	toXML := urlset{
+		Xmlns: xmlns,
+	}
 	for _, page := range pages {
-		fmt.Println(page)
+		toXML.Urls = append(toXML.Urls, loc{page})
+	}
+	fmt.Print(xml.Header)
+	enc := xml.NewEncoder(os.Stdout)
+	enc.Indent("", "  ")
+	if err := enc.Encode(toXML); err != nil {
+		panic(err)
 	}
 }
 
